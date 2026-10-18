@@ -1087,6 +1087,18 @@ function makePdf(p) {
   return doc;
 }
 async function saveFile(filename, data, mime) {
+  const cap = window.Capacitor;
+  if (cap && cap.isNativePlatform && cap.isNativePlatform()) {
+    // App de Android: guarda el archivo y abre "Compartir" (WhatsApp, correo, Drive…)
+    try {
+      const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+      const b64 = await new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = bad; r.readAsDataURL(blob); });
+      const { Filesystem, Share } = cap.Plugins;
+      const res = await Filesystem.writeFile({ path: filename, data: b64, directory: 'CACHE' });
+      await Share.share({ title: filename, files: [res.uri] });
+      return true;
+    } catch (e) { if (!/cancel/i.test(String(e && e.message))) toast('No se pudo compartir el archivo.'); return false; }
+  }
   if (STANDALONE) {
     const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
@@ -1355,5 +1367,5 @@ async function init() {
 init();
 </script>
 
-<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');</script>
+<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !window.Capacitor) navigator.serviceWorker.register('sw.js');</script>
 </body></html>
