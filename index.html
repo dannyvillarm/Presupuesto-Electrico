@@ -160,6 +160,32 @@ td.nm { min-width: 170px; }
 .dialog footer { border-top: 1px solid var(--line); justify-content: flex-end; flex-wrap: wrap; }
 .dialog footer .sp { flex: 1; }
 .dialog .body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.bdet td { background: var(--sunk); }
+.bdet .inner { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.bdet table { background: var(--surface); }
+.btog { font-size: .85rem; white-space: nowrap; }
+@media (max-width: 640px) {
+  .btbl, .btbl > tbody, .bmtbl, .bmtbl > tbody { display: block; }
+  .btbl > thead, .bmtbl > thead { display: none; }
+  .btbl > tbody > tr:not(.bdet) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 10px; border-top: 1px solid var(--line); }
+  .btbl > tbody > tr:first-child { border-top: 0; }
+  .btbl > tbody > tr:not(.bdet) > td { border: 0; padding: 0; text-align: left; }
+  .btbl > tbody > tr > td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .btbl > tbody > tr > td:nth-child(5) { grid-column: 2; grid-row: 1; }
+  .btbl > tbody > tr > td:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .btbl > tbody > tr > td:nth-child(4) { grid-column: 2; grid-row: 2; align-self: end; padding-bottom: 8px; text-align: right; }
+  .btbl > tbody > tr > td:nth-child(3) { grid-column: 1 / -1; grid-row: 3; }
+  .btbl td[data-l]::before { content: attr(data-l); display: block; font-size: .74rem; color: var(--muted); margin-bottom: 2px; }
+  .btbl td input.desc, .btbl td input.monto { width: 100%; min-width: 0; }
+  .btbl > tbody > tr.bdet { display: block; }
+  .btbl > tbody > tr.bdet > td { display: block; border-top: 0; padding: 8px 10px; }
+  .bdet .addbar { grid-template-columns: minmax(0, 1fr) 64px; }
+  .bdet .addbar select, .bdet .addbar input { min-width: 0; width: 100%; }
+  .bmtbl > tbody > tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .bmtbl > tbody > tr > td { border: 0; padding: 0; }
+  .bmtbl > tbody > tr > td.nm { grid-column: 1 / -1; min-width: 0; }
+  .bmtbl td input[type=number] { width: 100%; }
+}
 .presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .presets button { border: 1px dashed var(--line); background: var(--sunk); color: var(--ink); border-radius: 99px; padding: 5px 12px; font-size: .9rem; cursor: pointer; }
 .presets button:hover { border-color: var(--brand); color: var(--brand); }
@@ -634,6 +660,7 @@ const TABS = [['presupuestos', 'Presupuestos'], ['bloques', 'Por bloques'], ['sa
 
 const LS_KEY = 'presupuestos-electricos-v1';
 const STANDALONE = !window.claude;
+const openBloques = new Set();
 let db = null, tab = 'presupuestos', draft = null, dirty = false, search = '', modal = null, empForm = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -694,13 +721,16 @@ async function putEmpresa(data) {
 function costoMatSalida(s) {
   return (s.materiales || []).reduce((t, r) => { const m = byId('materiales', r.materialId); return t + (m ? num(m.precio) : 0) * num(r.cantidad); }, 0);
 }
+const bMatCosto = b => (b.materiales || []).reduce((t, m) => t + num(m.precio) * num(m.cantidad), 0);
+const bTotal = (b, f) => num(b.monto) + bMatCosto(b) * f;
 function matUnitLinea(l) { return (l.materiales || []).reduce((t, m) => t + num(m.precio) * num(m.cantidad), 0); }
 function calc(p) {
   const e = emp();
   if (p.tipo === 'bloques') {
-    const subtotal = (p.bloques || []).reduce((t, b) => t + num(b.monto), 0);
+    const f = 1 + num(p.margen) / 100, bl = p.bloques || [];
+    const subtotal = bl.reduce((t, b) => t + bTotal(b, f), 0), bCosto = bl.reduce((t, b) => t + bMatCosto(b), 0);
     const descuento = subtotal * num(p.descuento) / 100, base = subtotal - descuento, itbis = p.itbis ? base * num(e.itbis) / 100 : 0;
-    return { soloBloques: true, bloquesTotal: subtotal, mo: false, mat: false, f: 1, manoObra: 0, mats: [], materiales: 0, costoMat: 0, ganancia: 0, subtotal, descuento, base, itbis, total: base + itbis };
+    return { soloBloques: true, bloquesTotal: subtotal, bMat: bCosto > 0, mo: false, mat: false, f, manoObra: 0, mats: [], materiales: 0, costoMat: bCosto, ganancia: bCosto * (f - 1), subtotal, descuento, base, itbis, total: base + itbis };
   }
   const mo = p.tipo !== 'materiales', mat = p.tipo !== 'mano', f = 1 + num(p.margen) / 100;
   const agg = new Map();
@@ -719,12 +749,13 @@ function calc(p) {
   const mats = [...agg.values()].filter(m => m.cantidad > 0).map(m => ({ ...m, venta: m.precio * f, importe: m.precio * f * m.cantidad }));
   const materiales = mats.reduce((t, m) => t + m.importe, 0);
   const costoMat = mats.reduce((t, m) => t + m.precio * m.cantidad, 0);
-  const bloquesTotal = (p.bloques || []).reduce((t, b) => t + num(b.monto), 0);
+  const bloquesTotal = (p.bloques || []).reduce((t, b) => t + bTotal(b, f), 0);
+  const bCosto = (p.bloques || []).reduce((t, b) => t + bMatCosto(b), 0);
   const subtotal = manoObra + materiales + bloquesTotal;
   const descuento = subtotal * num(p.descuento) / 100;
   const base = subtotal - descuento;
   const itbis = p.itbis ? base * num(e.itbis) / 100 : 0;
-  return { mo, mat, f, manoObra, bloquesTotal, mats, materiales, costoMat, ganancia: materiales - costoMat, subtotal, descuento, base, itbis, total: base + itbis };
+  return { mo, mat, f, manoObra, bloquesTotal, bMat: bCosto > 0, mats, materiales, costoMat: costoMat + bCosto, ganancia: materiales - costoMat + bCosto * (f - 1), subtotal, descuento, base, itbis, total: base + itbis };
 }
 const lineTotal = (l, c) => num(l.cantidad) * ((c.mo ? num(l.manoObra) : 0) + (c.mat ? matUnitLinea(l) * c.f : 0));
 function snapLinea(s, cantidad = 1) {
@@ -759,7 +790,7 @@ const head = (title, sub, btn) => `<div class="head"><div><h2>${title}</h2>${sub
 const empty = (t, s) => `<div class="empty"><b>${t}</b>${s}</div>`;
 
 function viewBloques() {
-  return presList(p => p.tipo === 'bloques', head('Presupuestos por bloques', 'Cobra la obra por etapas sin detallar materiales: platea, losa, encaje, arrastre, accesorios… Pones el monto de cada bloque y la app suma el total.', '<button class="btn primary" data-act="nuevo-bloques">+ Nuevo por bloques</button>'),
+  return presList(p => p.tipo === 'bloques', head('Presupuestos por bloques', 'Cobra la obra por etapas: platea, losa, encaje, arrastre, accesorios… A cada bloque le pones su mano de obra, sus materiales o las dos cosas, y la app suma el total.', '<button class="btn primary" data-act="nuevo-bloques">+ Nuevo por bloques</button>'),
     empty('Todavía no hay presupuestos por bloques', 'Pulsa «Nuevo por bloques» para crear el primero.'));
 }
 function viewPresupuestos() {
@@ -860,7 +891,7 @@ function openEditor(id, tipo = 'completo') {
   const e = emp();
   draft = id ? clone(byId('presupuestos', id)) : { id: uid(), numero: null, fecha: today(), clienteId: '', obra: '', tipo, lineas: [], extras: [], bloques: [], incluye: 'mano', margen: num(e.margen), descuento: 0, itbis: true, trabajadores: [], notas: '', estado: 'borrador' };
   draft.lineas = draft.lineas || []; draft.extras = draft.extras || []; draft.trabajadores = draft.trabajadores || []; draft.bloques = draft.bloques || []; draft.incluye = draft.incluye || 'mano';
-  dirty = false; renderEditor();
+  dirty = false; openBloques.clear(); renderEditor();
   $('#editor').hidden = false; $('#editor').scrollTop = 0; document.body.classList.add('lock');
 }
 function closeEditor() { draft = null; $('#editor').hidden = true; $('#editor').innerHTML = ''; document.body.classList.remove('lock'); renderMain(); }
@@ -870,7 +901,7 @@ function renderEditor(keepScroll = true) {
   const cats = {}; S.salidas.forEach(s => (cats[s.categoria || 'Otras'] ||= []).push(s));
   const optS = Object.keys(cats).sort().map(k => `<optgroup label="${esc(k)}">${cats[k].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(s => `<option value="${s.id}">${esc(s.nombre)}</option>`).join('')}</optgroup>`).join('');
   const optM = S.materiales.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map(m => `<option value="${m.id}">${esc(m.nombre)} (${esc(m.unidad)})</option>`).join('');
-  const hmo = c.mo ? '' : 'hide', hmat = c.mat ? '' : 'hide';
+  const hmo = c.mo ? '' : 'hide', hmat = c.mat ? '' : 'hide', hmarg = c.mat || c.bMat ? '' : 'hide';
   ed.innerHTML = `
   <div class="sheet-bar"><div class="wrap">
     <button class="btn ghost" data-act="cerrar">← Volver</button>
@@ -904,7 +935,7 @@ function renderEditor(keepScroll = true) {
         </tbody></table></div>` : '<p class="muted">Agrega las salidas que lleva la obra: tomacorrientes, luces, interruptores, 220V…</p>'}
       </section>
 
-      ${bloquesTabla(p, 'Trabajos por bloque', 'Opcional: suma etapas con un monto fijo, como losa primer nivel, encaje o arrastre, junto con las salidas y los materiales.')}
+      ${bloquesTabla(p, 'Trabajos por bloque', 'Opcional: suma etapas como losa primer nivel, encaje o arrastre, junto con las salidas. Cada bloque puede llevar un monto de mano de obra, materiales del catálogo o las dos cosas.')}
 
       <section class="card ${hmat}">
         <h3>Materiales</h3>
@@ -918,7 +949,7 @@ function renderEditor(keepScroll = true) {
       <section class="card">
         <h3>Ajustes y personal</h3>
         <div class="grid2">
-          <div class="field ${hmat}"><label for="d-margen">Margen en materiales (%)</label><input type="number" id="d-margen" min="0" step="any" value="${p.margen}"></div>
+          <div class="field ${hmarg}"><label for="d-margen">Margen en materiales (%)</label><input type="number" id="d-margen" min="0" step="any" value="${p.margen}"></div>
           <div class="field"><label for="d-descuento">Descuento (%)</label><input type="number" id="d-descuento" min="0" max="100" step="any" value="${p.descuento}"></div>
           <div class="field"><span class="lbl">Impuesto</span><label class="inline" style="padding-top:8px;cursor:pointer"><input type="checkbox" id="d-itbis" ${p.itbis ? 'checked' : ''}> Cobrar ITBIS (${qty(e.itbis)}%)</label></div>
         </div>
@@ -946,8 +977,23 @@ function bloquesTabla(p, titulo, ayuda) {
   return `<section class="card">
     <h3>${titulo}</h3>
     ${presets.length ? `<div class="presets">${presets.map(b => `<button data-preset="${esc(b)}">+ ${esc(b)}</button>`).join('')}<button data-preset="">+ Otro bloque</button></div>` : '<div class="presets"><button data-preset="">+ Agregar bloque</button></div>'}
-    ${p.bloques.length ? `<div class="tbl-wrap"><table><thead><tr><th>Bloque</th><th class="n">Monto</th><th></th></tr></thead><tbody>${p.bloques.map((b, i) => `<tr><td><input type="text" class="desc" value="${esc(b.descripcion)}" data-bloque="${i}" data-k="descripcion" aria-label="Descripción del bloque" placeholder="Ej.: Losa primer nivel"></td><td class="n"><input type="number" class="monto" min="0" step="any" value="${b.monto}" data-bloque="${i}" data-k="monto" aria-label="Monto"></td><td><button class="icon-btn" data-rm-bloque="${i}" aria-label="Quitar">${ICON_X}</button></td></tr>`).join('')}</tbody></table></div>` : `<p class="muted" style="margin:0">${ayuda}</p>`}
+    ${p.bloques.length ? `<div class="tbl-wrap"><table class="btbl"><thead><tr><th>Bloque</th><th class="n">Mano de obra o precio fijo</th><th class="n">Materiales</th><th class="n">Importe</th><th></th></tr></thead><tbody>${p.bloques.map((b, i) => bloqueFila(b, i)).join('')}</tbody></table></div>
+    <p class="muted small" style="margin:0">Cada bloque puede llevar solo un monto, solo materiales o las dos cosas. Toca «Materiales» en un bloque para agregarle materiales del catálogo.</p>` : `<p class="muted" style="margin:0">${ayuda}</p>`}
   </section>`;
+}
+function bloqueFila(b, i) {
+  const f = 1 + num(draft.margen) / 100, mats = b.materiales || [], open = openBloques.has(i);
+  const optM = S.materiales.slice().sort((a, z) => a.nombre.localeCompare(z.nombre)).map(m => `<option value="${m.id}">${esc(m.nombre)} (${esc(m.unidad)})</option>`).join('');
+  let h = `<tr><td><input type="text" class="desc" value="${esc(b.descripcion)}" data-bloque="${i}" data-k="descripcion" aria-label="Descripción del bloque" placeholder="Ej.: Losa primer nivel"></td>
+    <td class="n" data-l="Mano de obra o precio fijo"><input type="number" class="monto" min="0" step="any" value="${b.monto}" data-bloque="${i}" data-k="monto" aria-label="Mano de obra o precio fijo"></td>
+    <td class="n"><button class="btn sm ghost btog" data-toggle-b="${i}" aria-expanded="${open}">${open ? '▾' : '▸'} Materiales${mats.length ? ` (${mats.length})` : ''}</button><br><span class="small muted" data-bm="${i}">${mats.length ? fmt(bMatCosto(b) * f) : ''}</span></td>
+    <td class="n" data-bt="${i}"><b>${fmt(bTotal(b, f))}</b></td>
+    <td><button class="icon-btn" data-rm-bloque="${i}" aria-label="Quitar bloque">${ICON_X}</button></td></tr>`;
+  if (open) h += `<tr class="bdet"><td colspan="5"><div class="inner">
+    ${mats.length ? `<table class="bmtbl"><thead><tr><th>Material del bloque</th><th class="n">Cant.</th><th class="n">Costo c/u</th><th></th></tr></thead><tbody>${mats.map((m, j) => `<tr><td class="nm">${esc(m.nombre)} <span class="muted small">(${esc(m.unidad)})</span></td><td class="n"><input type="number" min="0" step="any" value="${m.cantidad}" data-bmat="${i}:${j}" data-k="cantidad" aria-label="Cantidad"></td><td class="n"><input type="number" min="0" step="any" value="${m.precio}" data-bmat="${i}:${j}" data-k="precio" aria-label="Costo"></td><td><button class="icon-btn" data-rm-bmat="${i}:${j}" aria-label="Quitar">${ICON_X}</button></td></tr>`).join('')}</tbody></table>` : '<span class="muted small">Este bloque todavía no tiene materiales.</span>'}
+    ${S.materiales.length ? `<div class="addbar"><select id="bm-sel-${i}" aria-label="Material">${optM}</select><input type="number" id="bm-cant-${i}" value="1" min="0" step="any" aria-label="Cantidad"><button class="btn sm" data-add-bmat="${i}">Agregar material</button></div>` : '<span class="muted small">Registra materiales en su pestaña para usarlos aquí.</span>'}
+  </div></td></tr>`;
+  return h;
 }
 function matTable(c) {
   if (!c.mats.length) return '<p class="muted small" style="margin:0">Aún no hay materiales.</p>';
@@ -963,7 +1009,7 @@ function sumHtml(c) {
     ${c.descuento ? `<dt>Descuento ${qty(p.descuento)}%</dt><dd>−${money(c.descuento)}</dd>` : ''}
     ${p.itbis ? `<dt>ITBIS ${qty(e.itbis)}%</dt><dd>${money(c.itbis)}</dd>` : ''}
     <dt class="tot">Total</dt><dd class="tot">${money(c.total)}</dd>
-    ${c.mat ? `<dt class="int">Costo de materiales</dt><dd class="int">${money(c.costoMat)}</dd><dt class="small muted">Tu ganancia en materiales</dt><dd class="small">${money(c.ganancia)}</dd>` : ''}
+    ${c.mat || c.bMat ? `<dt class="int">Costo de materiales</dt><dd class="int">${money(c.costoMat)}</dd><dt class="small muted">Tu ganancia en materiales</dt><dd class="small">${money(c.ganancia)}</dd>` : ''}
   </dl>
   <div class="actions">
     <button class="btn primary" data-act="pdf">Descargar PDF</button>
@@ -974,6 +1020,7 @@ function sumHtml(c) {
 function refreshTotals() {
   const c = calc(draft);
   draft.lineas.forEach((l, i) => { const td = document.querySelector(`[data-lt="${i}"]`); if (td) td.textContent = fmt(lineTotal(l, c)); });
+  draft.bloques.forEach((b, i) => { const t = document.querySelector(`[data-bt="${i}"]`); if (t) t.innerHTML = `<b>${fmt(bTotal(b, c.f))}</b>`; const m = document.querySelector(`[data-bm="${i}"]`); if (m) m.textContent = (b.materiales || []).length ? fmt(bMatCosto(b) * c.f) : ''; });
   $('#sumcard').innerHTML = sumHtml(c);
   const mc = $('#matcalc'); if (mc) mc.innerHTML = matTable(c);
   $('#mtot').textContent = money(c.total);
@@ -1038,8 +1085,18 @@ function makePdf(p) {
     y = doc.lastAutoTable.finalY + 8;
   };
   const R = { halign: 'right' };
-  if (c.soloBloques) tbl('Presupuesto por bloques', ['No.', 'Descripción', 'Importe'],
-    p.bloques.filter(b => b.descripcion || num(b.monto)).map((b, i) => [String(i + 1), b.descripcion || 'Bloque', fmt(b.monto)]), { 0: { cellWidth: 12, halign: 'center' }, 2: { ...R, cellWidth: 40 } });
+  const blRows = () => {
+    const body = [];
+    p.bloques.filter(b => b.descripcion || num(b.monto) || (b.materiales || []).length).forEach((b, i) => {
+      const mats = (b.materiales || []).filter(m => num(m.cantidad) > 0);
+      body.push([String(i + 1), b.descripcion || 'Bloque', num(b.monto) ? fmt(b.monto) : '', mats.length ? fmt(bMatCosto(b) * c.f) : '', { content: fmt(bTotal(b, c.f)), styles: { fontStyle: 'bold' } }]);
+      for (const m of mats) body.push(['', { content: `${m.nombre}: ${qty(m.cantidad)} ${m.unidad} x ${fmt(num(m.precio) * c.f)}`, styles: { fontSize: 8, textColor: GREY, cellPadding: { top: 1, bottom: 1, left: 6, right: 2 } } }, '', { content: fmt(num(m.precio) * c.f * num(m.cantidad)), styles: { fontSize: 8, textColor: GREY } }, '']);
+    });
+    return body;
+  };
+  const blCols = { 0: { cellWidth: 10, halign: 'center' }, 2: { ...R, cellWidth: 30 }, 3: { ...R, cellWidth: 28 }, 4: { ...R, cellWidth: 32 } };
+  const blHead = ['No.', 'Descripción', 'Mano de obra', 'Materiales', 'Importe'];
+  if (c.soloBloques) tbl('Presupuesto por bloques', blHead, blRows(), blCols);
   if (c.mo && p.lineas.length) tbl(p.tipo === 'completo' ? 'Mano de obra por salida eléctrica' : 'Salidas eléctricas (mano de obra)', ['Descripción', 'Cant.', 'Precio unit.', 'Importe'],
     p.lineas.filter(l => num(l.cantidad) > 0).map(l => [l.nombre, qty(l.cantidad), fmt(l.manoObra), fmt(num(l.manoObra) * num(l.cantidad))]), { 1: { ...R, cellWidth: 18 }, 2: { ...R, cellWidth: 30 }, 3: { ...R, cellWidth: 32 } });
   if (c.mat && p.tipo === 'materiales' && p.lineas.length) {
@@ -1050,8 +1107,7 @@ function makePdf(p) {
   if (c.mat && c.mats.length) tbl('Materiales', ['Material', 'Cantidad', 'Unidad', 'Precio unit.', 'Importe'],
     c.mats.map(m => [m.nombre, qty(m.cantidad), m.unidad, fmt(m.venta), fmt(m.importe)]), { 1: { ...R, cellWidth: 20 }, 2: { cellWidth: 18 }, 3: { ...R, cellWidth: 28 }, 4: { ...R, cellWidth: 32 } });
 
-  if (!c.soloBloques && c.bloquesTotal) tbl('Trabajos por bloque', ['No.', 'Descripción', 'Importe'],
-    p.bloques.filter(b => b.descripcion || num(b.monto)).map((b, i) => [String(i + 1), b.descripcion || 'Bloque', fmt(b.monto)]), { 0: { cellWidth: 12, halign: 'center' }, 2: { ...R, cellWidth: 40 } });
+  if (!c.soloBloques && c.bloquesTotal) tbl('Trabajos por bloque', blHead, blRows(), blCols);
   // Totales
   const rows = [];
   if (c.mo) rows.push(['Mano de obra', m2(c.manoObra)]);
@@ -1267,7 +1323,16 @@ document.addEventListener('click', async ev => {
   if (d.trabajador) return openForm('trabajadores', d.trabajador);
   if (d.rmLine !== undefined) { draft.lineas.splice(+d.rmLine, 1); markDirty(); return renderEditor(); }
   if (d.rmExtra !== undefined) { draft.extras.splice(+d.rmExtra, 1); markDirty(); return renderEditor(); }
-  if (d.rmBloque !== undefined) { draft.bloques.splice(+d.rmBloque, 1); markDirty(); return renderEditor(); }
+  if (d.rmBloque !== undefined) { draft.bloques.splice(+d.rmBloque, 1); openBloques.clear(); markDirty(); return renderEditor(); }
+  if (d.toggleB !== undefined) { const i = +d.toggleB; openBloques.has(i) ? openBloques.delete(i) : openBloques.add(i); return renderEditor(); }
+  if (d.rmBmat !== undefined) { const [i, j] = d.rmBmat.split(':').map(Number); draft.bloques[i].materiales.splice(j, 1); markDirty(); return renderEditor(); }
+  if (d.addBmat !== undefined) {
+    const i = +d.addBmat, m = byId('materiales', $('#bm-sel-' + i).value), q = num($('#bm-cant-' + i).value) || 1; if (!m) return;
+    const b = draft.bloques[i]; b.materiales = b.materiales || [];
+    const ex = b.materiales.find(x => x.materialId === m.id);
+    if (ex) ex.cantidad = num(ex.cantidad) + q; else b.materiales.push({ materialId: m.id, nombre: m.nombre, unidad: m.unidad, precio: num(m.precio), cantidad: q });
+    markDirty(); renderEditor(); const sel = $('#bm-sel-' + i); if (sel) sel.value = m.id; return;
+  }
   if (d.preset !== undefined) { draft.bloques.push({ descripcion: d.preset, monto: '' }); markDirty(); renderEditor(); const ins = document.querySelectorAll(d.preset ? 'input.monto' : 'input.desc'); if (ins.length) ins[ins.length - 1].focus(); return; }
   if (d.rmRec !== undefined) { modal.rec.splice(+d.rmRec, 1); return renderRec(); }
   switch (act) {
@@ -1295,6 +1360,7 @@ document.addEventListener('click', async ev => {
     case 'actualizar-precios':
       draft.lineas = draft.lineas.map(l => { const s = byId('salidas', l.salidaId); return s ? snapLinea(s, l.cantidad) : l; });
       draft.extras = draft.extras.map(x => { const m = byId('materiales', x.materialId); return m ? { ...x, nombre: m.nombre, unidad: m.unidad, precio: num(m.precio) } : x; });
+      draft.bloques = draft.bloques.map(b => ({ ...b, materiales: (b.materiales || []).map(x => { const m = byId('materiales', x.materialId); return m ? { ...x, nombre: m.nombre, unidad: m.unidad, precio: num(m.precio) } : x; }) }));
       markDirty(); renderEditor(); return toast('Precios actualizados con el catálogo');
     case 'guardar': return saveDraft();
     case 'exportar': return exportData();
@@ -1327,6 +1393,7 @@ document.addEventListener('input', ev => {
   if (!draft) return;
   if (d.line !== undefined) { draft.lineas[+d.line][d.k] = num(el.value); return refreshTotals(); }
   if (d.extra !== undefined) { draft.extras[+d.extra][d.k] = num(el.value); return refreshTotals(); }
+  if (d.bmat !== undefined) { const [i, j] = d.bmat.split(':').map(Number); draft.bloques[i].materiales[j][d.k] = num(el.value); return refreshTotals(); }
   if (d.bloque !== undefined) { draft.bloques[+d.bloque][d.k] = d.k === 'monto' ? num(el.value) : el.value; return d.k === 'monto' ? refreshTotals() : markDirty(); }
   const map = { 'd-obra': 'obra', 'd-fecha': 'fecha', 'd-notas': 'notas' };
   if (map[el.id]) { draft[map[el.id]] = el.value; return markDirty(); }
