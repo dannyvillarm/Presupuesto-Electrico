@@ -1316,7 +1316,7 @@ function loadFirma(file) {
       // Quita el fondo claro del papel y deja solo el trazo en tinta oscura
       const d = ctx.getImageData(0, 0, cv.width, cv.height), px = d.data;
       let sum = 0, n = 0;
-      for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 0) { sum += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]; n++; }
+      for (let i = 0; i < px.length; i += 4) { sum += px[i + 3] > 0 ? 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2] : 255; n++; }
       const limite = Math.min(200, (n ? sum / n : 255) - 45);
       let minX = cv.width, minY = cv.height, maxX = -1, maxY = -1;
       for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
