@@ -198,6 +198,9 @@ td input.monto { width: 130px; }
 /* Empresa */
 .logo-up { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .logo-up .logo { width: 96px; height: 96px; }
+.field label.btn { font-size: .95rem; font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.firma-box { width: 220px; height: 90px; border: 1px dashed var(--line); border-radius: 6px; background: #fff; display: grid; place-items: center; overflow: hidden; color: #5a6b79; font-size: .85rem; flex: none; max-width: 100%; }
+.firma-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 @media (max-width: 860px) {
   .ed { grid-template-columns: minmax(0, 1fr); }
@@ -647,7 +650,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 const DEMO = {"materiales":[{"id":"m-thhn14","nombre":"Cable THHN #14","unidad":"m","precio":28,"categoria":"Cables"},{"id":"m-thhn12","nombre":"Cable THHN #12","unidad":"m","precio":38,"categoria":"Cables"},{"id":"m-thhn10","nombre":"Cable THHN #10","unidad":"m","precio":60,"categoria":"Cables"},{"id":"m-thhn8","nombre":"Cable THHN #8","unidad":"m","precio":95,"categoria":"Cables"},{"id":"m-pvc12","nombre":"Tubería PVC eléctrica 1/2\"","unidad":"pie","precio":10,"categoria":"Canalización"},{"id":"m-pvc34","nombre":"Tubería PVC eléctrica 3/4\"","unidad":"pie","precio":14,"categoria":"Canalización"},{"id":"m-cajaoct","nombre":"Caja octogonal PVC","unidad":"und","precio":35,"categoria":"Cajas"},{"id":"m-cajarect","nombre":"Caja rectangular 2x4 PVC","unidad":"und","precio":30,"categoria":"Cajas"},{"id":"m-toma","nombre":"Tomacorriente doble 15A","unidad":"und","precio":110,"categoria":"Dispositivos"},{"id":"m-toma220","nombre":"Tomacorriente 220V 30A","unidad":"und","precio":350,"categoria":"Dispositivos"},{"id":"m-int1","nombre":"Interruptor sencillo","unidad":"und","precio":95,"categoria":"Dispositivos"},{"id":"m-int2","nombre":"Interruptor doble","unidad":"und","precio":165,"categoria":"Dispositivos"},{"id":"m-tapa","nombre":"Tapa o placa","unidad":"und","precio":45,"categoria":"Dispositivos"},{"id":"m-plafon","nombre":"Plafón (portalámparas)","unidad":"und","precio":75,"categoria":"Dispositivos"},{"id":"m-brk20","nombre":"Breaker 20A un polo","unidad":"und","precio":380,"categoria":"Protección"},{"id":"m-brk30","nombre":"Breaker 30A doble polo","unidad":"und","precio":750,"categoria":"Protección"},{"id":"m-conector","nombre":"Conector de empalme","unidad":"und","precio":8,"categoria":"Accesorios"},{"id":"m-cinta","nombre":"Cinta aislante","unidad":"rollo","precio":60,"categoria":"Accesorios"}],"salidas":[{"id":"s-toma","nombre":"Salida de tomacorriente 110V","categoria":"Tomacorrientes","manoObra":650,"materiales":[{"materialId":"m-thhn12","cantidad":15},{"materialId":"m-pvc12","cantidad":20},{"materialId":"m-cajarect","cantidad":1},{"materialId":"m-toma","cantidad":1},{"materialId":"m-tapa","cantidad":1},{"materialId":"m-conector","cantidad":3}]},{"id":"s-luz","nombre":"Salida de luz en techo","categoria":"Iluminación","manoObra":600,"materiales":[{"materialId":"m-thhn14","cantidad":15},{"materialId":"m-pvc12","cantidad":20},{"materialId":"m-cajaoct","cantidad":1},{"materialId":"m-plafon","cantidad":1},{"materialId":"m-conector","cantidad":3}]},{"id":"s-int1","nombre":"Salida de interruptor sencillo","categoria":"Interruptores","manoObra":500,"materiales":[{"materialId":"m-thhn14","cantidad":10},{"materialId":"m-pvc12","cantidad":15},{"materialId":"m-cajarect","cantidad":1},{"materialId":"m-int1","cantidad":1},{"materialId":"m-tapa","cantidad":1}]},{"id":"s-int2","nombre":"Salida de interruptor doble","categoria":"Interruptores","manoObra":600,"materiales":[{"materialId":"m-thhn14","cantidad":14},{"materialId":"m-pvc12","cantidad":15},{"materialId":"m-cajarect","cantidad":1},{"materialId":"m-int2","cantidad":1},{"materialId":"m-tapa","cantidad":1}]},{"id":"s-220","nombre":"Salida 220V para aire acondicionado","categoria":"Tomacorrientes","manoObra":1500,"materiales":[{"materialId":"m-thhn10","cantidad":30},{"materialId":"m-pvc34","cantidad":25},{"materialId":"m-cajarect","cantidad":1},{"materialId":"m-toma220","cantidad":1},{"materialId":"m-brk30","cantidad":1}]},{"id":"s-abanico","nombre":"Salida para abanico de techo","categoria":"Iluminación","manoObra":900,"materiales":[{"materialId":"m-thhn14","cantidad":15},{"materialId":"m-pvc12","cantidad":20},{"materialId":"m-cajaoct","cantidad":1},{"materialId":"m-conector","cantidad":4}]},{"id":"s-breaker","nombre":"Instalación de breaker en panel","categoria":"Panel","manoObra":350,"materiales":[{"materialId":"m-brk20","cantidad":1}]}],"clientes":[],"trabajadores":[],"presupuestos":[],"empresa":{"moneda":"RD$","itbis":18,"validez":15,"margen":15}};
 const COLS = ['materiales', 'salidas', 'clientes', 'trabajadores', 'presupuestos'];
 const S = { materiales: [], salidas: [], clientes: [], trabajadores: [], presupuestos: [], empresa: {}, mode: 'connecting' };
-const EMP_DEF = { nombre: '', rnc: '', telefono: '', correo: '', direccion: '', logo: '', moneda: 'RD$', itbis: 18, validez: 15, margen: 15,
+const EMP_DEF = { nombre: '', rnc: '', telefono: '', correo: '', direccion: '', logo: '', firma: '', firmaNombre: '', moneda: 'RD$', itbis: 18, validez: 15, margen: 15,
   nota: 'Precios sujetos a cambio sin previo aviso. Forma de pago: 50% al iniciar y 50% al terminar la obra.',
   bloques: 'Platea\nLosa primer nivel\nEncaje primer nivel\nLosa segundo nivel\nEncaje segundo nivel\nArrastre (cableado)\nAccesorios\nPanel y acometida' };
 const TIPOS = { mano: 'Solo mano de obra', materiales: 'Solo materiales', completo: 'Mano de obra y materiales', bloques: 'Presupuesto por bloques' };
@@ -686,7 +689,7 @@ function errMsg(e) {
   const c = e && e.code;
   if (c === 'quota_exceeded') return 'Se llenó el espacio de la base de datos. Elimina presupuestos viejos.';
   if (c === 'not_granted') return 'No tienes permiso para guardar en esta app.';
-  if (c === 'invalid_argument') return 'No se pudo guardar: el registro es demasiado grande (revisa el logo).';
+  if (c === 'invalid_argument') return 'No se pudo guardar: el registro es demasiado grande (prueba con un logo o una firma más pequeños).';
   return 'No se pudo guardar. Revisa tu conexión e inténtalo otra vez.';
 }
 
@@ -870,6 +873,12 @@ function viewEmpresa() {
       ${fld('emp-margen', 'Margen en materiales por defecto (%)', e.margen, 'number')}${fld('emp-validez', 'Validez del presupuesto (días)', e.validez, 'number')}
     </div>
     <div class="field"><label for="emp-bloques">Bloques frecuentes (uno por línea)</label><textarea id="emp-bloques" style="min-height:150px">${esc(e.bloques)}</textarea><span class="muted small">Salen como botones rápidos en los presupuestos por bloques.</span></div>
+    <div class="field"><span class="lbl">Firma para el PDF</span>
+      <div class="logo-up"><div class="firma-box">${e.firma ? `<img src="${esc(e.firma)}" alt="Tu firma">` : 'Sin firma'}</div>
+        <div class="inline" style="flex-wrap:wrap"><label class="btn" for="firma-file">${e.firma ? 'Cambiar firma' : 'Subir firma'}</label><input type="file" id="firma-file" accept="image/*" hidden>${e.firma ? '<button class="btn ghost danger" data-act="quitar-firma">Quitar</button>' : ''}</div></div>
+      <span class="muted small">Firma en una hoja blanca con bolígrafo oscuro y tómale una foto de cerca. La app limpia el fondo sola y la pone sobre la línea de firma del PDF.</span>
+    </div>
+    ${fld('emp-firmaNombre', 'Nombre debajo de la firma', e.firmaNombre, 'text', 'placeholder="Ej.: Ing. Danny Villar, electricista"')}
     <div class="field"><label for="emp-nota">Nota al pie del PDF</label><textarea id="emp-nota">${esc(e.nota)}</textarea></div>
     <div><button class="btn primary" data-act="guardar-empresa">Guardar datos</button></div>
   </div>
@@ -1132,12 +1141,15 @@ function makePdf(p) {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...INK); doc.text('Notas y condiciones', M, y); y += 4.5;
     doc.setFont('helvetica', 'normal'); doc.setTextColor(...GREY); doc.text(lines, M, y); y += lines.length * 4 + 6;
   }
-  if (y > H - 32) { doc.addPage(); y = M; }
-  const sy = Math.max(y + 14, H - 32);
+  const firmaH = e.firma ? 22 : 0;
+  if (y + firmaH > H - 32) { doc.addPage(); y = M; }
+  const sy = Math.max(y + 14 + firmaH, H - 32);
+  if (e.firma) { try { const pr = doc.getImageProperties(e.firma); let h = 20, w = pr.width * h / pr.height; if (w > 66) { w = 66; h = pr.height * w / pr.width; } doc.addImage(e.firma, 'PNG', M + 2, sy - h - 0.5, w, h); } catch (_) {} }
   doc.setDrawColor(...GREY); doc.setLineWidth(0.3);
   doc.line(M, sy, M + 70, sy); doc.line(W - M - 70, sy, W - M, sy);
   doc.setFontSize(8.5); doc.setTextColor(...GREY);
-  doc.text(e.nombre || 'Contratista', M, sy + 4.5); doc.text('Aceptado por el cliente', W - M - 70, sy + 4.5);
+  doc.text(e.firmaNombre || e.nombre || 'Contratista', M, sy + 4.5);
+  if (e.firmaNombre && e.nombre) doc.text(e.nombre, M, sy + 8.5); doc.text('Aceptado por el cliente', W - M - 70, sy + 4.5);
   const n = doc.getNumberOfPages();
   for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(...GREY); doc.text(`${pnum(p)}  ·  Página ${i} de ${n}`, W - M, H - 8, { align: 'right' }); }
   return doc;
@@ -1292,6 +1304,41 @@ async function downloadApp() {
 }
 
 /* ---------- Logo ---------- */
+function loadFirma(file) {
+  if (!file || !file.type.startsWith('image/')) { toast('Elige una imagen JPG o PNG.'); return; }
+  const r = new FileReader();
+  r.onload = () => {
+    const img = new Image();
+    img.onload = async () => {
+      const k = Math.min(1, 520 / img.width, 220 / img.height);
+      const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.width * k)); cv.height = Math.max(1, Math.round(img.height * k));
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      // Quita el fondo claro del papel y deja solo el trazo en tinta oscura
+      const d = ctx.getImageData(0, 0, cv.width, cv.height), px = d.data;
+      let sum = 0, n = 0;
+      for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 0) { sum += 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]; n++; }
+      const limite = Math.min(200, (n ? sum / n : 255) - 45);
+      let minX = cv.width, minY = cv.height, maxX = -1, maxY = -1;
+      for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+        const i = (y * cv.width + x) * 4, lum = 0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2];
+        if (px[i + 3] === 0 || lum > limite) { px[i + 3] = 0; continue; }
+        px[i] = Math.min(px[i], 40); px[i + 1] = Math.min(px[i + 1], 50); px[i + 2] = Math.min(px[i + 2], 90);
+        px[i + 3] = Math.round(255 * Math.min(1, (limite - lum) / 60 + 0.35));
+        if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+      if (maxX < 0) { toast('No se ve la firma en esa foto. Usa tinta oscura sobre papel blanco.'); return; }
+      ctx.putImageData(d, 0, 0);
+      const pad = 4, w = Math.min(cv.width, maxX - minX + 1 + pad * 2), h = Math.min(cv.height, maxY - minY + 1 + pad * 2);
+      const out = document.createElement('canvas'); out.width = w; out.height = h;
+      out.getContext('2d').drawImage(cv, Math.max(0, minX - pad), Math.max(0, minY - pad), w, h, 0, 0, w, h);
+      const data = out.toDataURL('image/png');
+      try { await putEmpresa({ ...S.empresa, firma: data }); empForm = null; renderMain(); toast('Firma guardada'); } catch (e) { toast(errMsg(e)); }
+    };
+    img.onerror = () => toast('No se pudo leer esa imagen.');
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
 function loadLogo(file) {
   if (!file || !file.type.startsWith('image/')) { toast('Elige una imagen JPG o PNG.'); return; }
   const r = new FileReader();
@@ -1379,9 +1426,10 @@ document.addEventListener('click', async ev => {
     case 'descartar': return closeEditor();
     case 'guardar-empresa': {
       const g = k => $('#emp-' + k).value.trim();
-      const data = { ...S.empresa, nombre: g('nombre'), rnc: g('rnc'), telefono: g('telefono'), correo: g('correo'), direccion: g('direccion'), moneda: g('moneda') || 'RD$', itbis: num(g('itbis')), margen: num(g('margen')), validez: num(g('validez')) || 15, nota: $('#emp-nota').value.trim(), bloques: $('#emp-bloques').value.trim() };
+      const data = { ...S.empresa, nombre: g('nombre'), rnc: g('rnc'), telefono: g('telefono'), correo: g('correo'), direccion: g('direccion'), moneda: g('moneda') || 'RD$', itbis: num(g('itbis')), margen: num(g('margen')), validez: num(g('validez')) || 15, nota: $('#emp-nota').value.trim(), firmaNombre: g('firmaNombre'), bloques: $('#emp-bloques').value.trim() };
       try { await putEmpresa(data); empForm = null; renderTop(); renderMain(); toast('Datos de la empresa guardados'); } catch (e) { toast(errMsg(e)); } return;
     }
+    case 'quitar-firma': try { await putEmpresa({ ...S.empresa, firma: '' }); empForm = null; renderMain(); } catch (e) { toast(errMsg(e)); } return;
     case 'quitar-logo': try { await putEmpresa({ ...S.empresa, logo: '' }); renderMain(); } catch (e) { toast(errMsg(e)); } return;
   }
 });
@@ -1402,6 +1450,7 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const el = ev.target, d = el.dataset;
   if (el.id === 'logo-file') return loadLogo(el.files[0]);
+  if (el.id === 'firma-file') { loadFirma(el.files[0]); el.value = ''; return; }
   if (el.id === 'import-file') { importData(el.files[0]); el.value = ''; return; }
   if (modal && d.rec !== undefined) { modal.rec[+d.rec][d.k] = d.k === 'cantidad' ? num(el.value) : el.value; return recSum(); }
   if (!draft) return;
